@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+.test-output/
+*.db
+*.db-wal
+*.db-shm
+.env
+config.local.json
+pnpm-lock.yaml

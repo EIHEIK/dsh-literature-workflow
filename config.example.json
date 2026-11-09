@@ -1,0 +1,15 @@
+{
+  "dataDir": "D:/LiteratureTranslation/jobs",
+  "python": "D:/LiteratureTranslation/runtime/Scripts/python.exe",
+  "engine": "D:/LiteratureTranslation/engine/Scripts/pdf2zh_next.exe",
+  "expectedEngineVersion": "",
+  "model": "deepseek-flash",
+  "allowApiCalls": false,
+  "allowZoteroWrite": false,
+  "requestLimit": 100,
+  "qps": 1,
+  "apiConcurrency": 2,
+  "timeoutSeconds": 3600,
+  "zoteroApi": "http://127.0.0.1:23119/api",
+  "zoteroMcp": "http://127.0.0.1:23120/mcp"
+}
