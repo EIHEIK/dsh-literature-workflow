@@ -7,6 +7,12 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
 .env
 config.local.json
 pnpm-lock.yaml
+docs/IMPLEMENTATION_PLAN.md
+docs/IMPLEMENTATION_PLAN_CURRENT.md
+docs/IMPLEMENTATION_STATUS.md

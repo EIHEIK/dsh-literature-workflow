@@ -27,7 +27,7 @@ def object_hash(value): return hashlib.sha256(canonical(value).encode()).hexdige
 def atomic(path, value):
     path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
-    with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
+    with open(tmp, 'x', encoding='utf-8', newline='\n') as f:
         f.write(json.dumps(value, ensure_ascii=False, indent=2)); f.flush(); os.fsync(f.fileno())
     os.replace(tmp, path)
 
@@ -84,10 +84,18 @@ class Store:
 
     def folder(self, job): return self.root/'jobs'/job['id']
 
-    def create(self, a, actor):
+    def create(self, a, actor, *, source_info=None):
         identity(actor)
         src = Path(a['source']).resolve(strict=True)
-        info = pdf_info(src); sha = digest(src); scope = page_scope(a.get('pages'), info['pages'])
+        sha = digest(src)
+        if source_info is None:info=pdf_info(src) # legacy local CLI compatibility
+        else:
+            if source_info.get('sourceSha256')!=sha:raise ValueError('Isolated source scan no longer matches PDF')
+            info=source_info.get('sourceInfo',{})
+            if (type(info.get('pages')) is not int or not 1<=info['pages']<=2000 or
+                not isinstance(info.get('text_lengths'),list) or len(info['text_lengths'])!=info['pages'] or
+                any(type(n) is not int or n<0 for n in info['text_lengths'])):raise ValueError('Invalid isolated source information')
+        scope = page_scope(a.get('pages'), info['pages'])
         config = a.get('config', {})
         for k in ('apiKey','api_key','token','authorization'):
             if k in config: raise ValueError('Credentials must not enter jobs')
@@ -168,7 +176,7 @@ class Store:
         j.update(candidate=candidate, acceptance=None, publication=None, archive={}, state='needs_review', lease=None, leaseUntil=0)
         j['producers'] = sorted(set(j['producers']+[actor])); self.save(j); return j
 
-    def verify(self, j):
+    def verify(self, j, *, allow_failed_qa=False):
         c = j.get('candidate')
         if not c: raise ValueError('No candidate')
         if digest(j['source']) != c['sourceSha256'] or c['sourceSha256'] != j['sourceSha256']: raise ValueError('Source identity mismatch')
@@ -176,7 +184,7 @@ class Store:
         if c['configHash'] != object_hash(j['config']): raise ValueError('Configuration changed')
         for f in c['files'].values():
             if digest(f['path']) != f['sha256']: raise ValueError('Candidate/evidence file changed: '+Path(f['path']).name)
-        if read_json(c['files']['qa']['path'])['hardFailures']: raise ValueError('Deterministic QA failed')
+        if not allow_failed_qa and read_json(c['files']['qa']['path'])['hardFailures']: raise ValueError('Deterministic QA failed')
         return c
 
     def review_begin(self, jobid, actor):
@@ -227,12 +235,15 @@ class Store:
         if t['candidate']!=c['id'] or t['actor'] in j['producers'] or not f or digest(f['path'])!=f['sha256']: raise ValueError('Review dependency invalid')
         r=read_json(f['path'])
         if r['verdict']!='pass': raise ValueError('Review has not passed')
+        if t.get('protocol')=='independent-api-v1':
+            from review_protocol import verify_api_review
+            verify_api_review(self,t,c)
         return dict(candidate=c['id'], review=t['id'], reviewFile=f, files=c['files'], codeHash=c['codeHash'])
 
     def accept(self,jobid):
         j=self.get(jobid);j['acceptance']=self.acceptance(j);j['state']='accepted';self.save(j);return j
 
-    def publish(self,jobid):
+    def publish(self,jobid,*,verify_pdf=True):
         j=self.get(jobid)
         if not j.get('acceptance') or j['acceptance']!=self.acceptance(j): raise ValueError('Valid acceptance required')
         c=j['candidate']; folder=self.root/'output'/jobid/c['id'];folder.mkdir(parents=True,exist_ok=True)
@@ -245,7 +256,8 @@ class Store:
                 temp=folder/(target.name+'.'+uuid.uuid4().hex+'.tmp');shutil.copyfile(src['path'],temp)
                 if digest(temp)!=src['sha256']: raise ValueError('Publication copy changed')
                 os.replace(temp,target)
-            pdf_info(target);outputs[mode]={'path':str(target),'sha256':digest(target)}
+            if verify_pdf:pdf_info(target)
+            outputs[mode]={'path':str(target),'sha256':digest(target)}
         publication={'id':'pub-'+c['id'],'candidate':c['id'],'outputs':outputs}
         path=folder/'publication.json'
         if path.exists() and read_json(path)!=publication: raise ValueError('Publication manifest conflict')
@@ -299,6 +311,11 @@ def dispatch(store,a,actor):
     raise ValueError('Unknown operation')
 
 if __name__=='__main__':
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding='utf-8', errors='strict' if stream is not sys.stderr else 'backslashreplace')
+        except Exception:
+            pass
     try:
         req=json.load(sys.stdin); s=Store(req['root'])
         with s.transaction(): result=dispatch(s,req['args'],req.get('actor','unidentified'))

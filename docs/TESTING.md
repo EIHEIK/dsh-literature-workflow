@@ -1,5 +1,7 @@
 # 测试与恢复说明
 
+当前独立后台版本首先参考[工作流](WORKFLOW.md)、[安装恢复](INSTALLATION_RECOVERY.md)与[验证记录](VALIDATION.md)。下文保留RC1的显式`legacy`测试及恢复说明，不是后台默认操作步骤。新后台按容器身份、阶段代次、私有请求收据和费用台账恢复，不通过旧worker手动批准验收。
+
 ## 测试层次
 
 1. Node host 合约：工具注册、skills provider、实际 session 身份要求、API／归档开关。

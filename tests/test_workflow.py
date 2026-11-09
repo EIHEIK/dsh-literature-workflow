@@ -92,6 +92,18 @@ class WorkflowTests(unittest.TestCase):
         results=[json.loads(p.stdout.read()) for p in ps]
         for p in ps:p.wait();p.stdout.close()
         self.assertEqual(sum(r['ok'] for r in results),1)
+    def test_cli_stdio_utf8_without_utf8_locale(self):
+        """CLI must emit/accept UTF-8 even when the parent locale is cp936 (regression)."""
+        script=Path(__file__).resolve().parents[1]/'runtime/core.py'
+        title='中文标题·公式 Γ=0.5'
+        request=json.dumps({'root':str(self.s.root),'actor':'producer','args':{'action':'create','source':str(self.src),'title':title,'config':{'revision':'utf8-locale'}}})
+        env={**os.environ,'PYTHONIOENCODING':'cp936','PYTHONUTF8':'0'}
+        p=subprocess.run([sys.executable,str(script)],input=request.encode('utf-8'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
+        self.assertEqual(p.returncode,0,p.stderr.decode('utf-8','replace')[-400:])
+        result=json.loads(p.stdout.decode('utf-8'))
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['result']['title'],title)
+
     def test_real_crash_after_publication_files_before_sql_commit(self):
         self.accepted()
         code="from core import Store;import os;s=Store(os.environ['TEST_ROOT']);s.db.execute('BEGIN IMMEDIATE');s.publish(os.environ['TEST_JOB']);os._exit(77)"

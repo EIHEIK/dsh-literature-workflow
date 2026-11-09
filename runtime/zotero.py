@@ -16,14 +16,39 @@ def key(value):
     if not isinstance(value,str) or not re.fullmatch('[A-Z0-9]{8}',value):raise ValueError('Zotero key must be 8 uppercase letters/digits')
     return value
 
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,*args,**kwargs):raise ValueError('Zotero service redirects are not allowed')
+
+
+def scope_title(job):
+    pages=job['sourcePages']
+    if pages==list(range(1,job['sourceInfo']['pages']+1)):return ''
+    groups=[];start=last=pages[0]
+    for number in pages[1:]+[None]:
+        if number is not None and number==last+1:last=number;continue
+        groups.append(str(start) if start==last else f'{start}–{last}')
+        start=last=number
+    return ' · 部分译本 p'+','.join(groups)
+
 class Zotero:
     def __init__(self,api='http://127.0.0.1:23119/api',mcp='http://127.0.0.1:23120/mcp'):
-        self.api=local_url(api);self.mcp=local_url(mcp);self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}));self.session=None;self.seq=0
+        self.api=local_url(api);self.mcp=local_url(mcp);self.opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect());self.session=None;self.seq=0
     def get(self,path):
         with self.opener.open(self.api+path,timeout=30) as r: data=r.read().decode('utf-8')
         try:return json.loads(data)
         except json.JSONDecodeError:return data
-    def children(self,parent):return self.get('/users/0/items/'+key(parent)+'/children?limit=100')
+    def children(self,parent):
+        result=[];seen=set()
+        for start in range(0,10000,100):
+            items=self.get('/users/0/items/'+key(parent)+'/children?limit=100&start='+str(start))
+            if not isinstance(items,list):raise ValueError('Invalid Zotero children response')
+            for item in items:
+                identity=item.get('key',item.get('data',{}).get('key'))
+                if not identity or identity in seen:raise ValueError('Ambiguous Zotero pagination')
+                seen.add(identity);result.append(item)
+            if len(items)<100:return result
+        raise ValueError('Zotero child inventory exceeded its explicit bound')
     def file(self,attachment):
         value=self.get('/users/0/items/'+key(attachment)+'/file/view/url')
         if not isinstance(value,str):raise ValueError('Zotero did not return a local attachment URL')
@@ -69,7 +94,7 @@ def archive(store,jid,a,client=None):
     receipts=store.folder(j)/'archive'/j['publication']['id'];receipts.mkdir(parents=True,exist_ok=True)
     connected=False
     for mode,f in j['publication']['outputs'].items():
-        title=('中文阅读版' if mode=='cn' else '中英左右对照')+' · '+j['candidate']['id'][-12:]
+        title=('中文阅读版' if mode=='cn' else '中英左右对照')+scope_title(j)+' · '+j['candidate']['id'][-12:]
         path=receipts/(mode+'.json');record=read_json(path) if path.exists() else None
         matches=[]
         for item in client.children(parent):

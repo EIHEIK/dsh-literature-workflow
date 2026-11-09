@@ -10,6 +10,12 @@ import worker
 from test_workflow import pdf
 
 class OfflineWorkerTests(unittest.TestCase):
+    def test_engine_version_survives_rich_warning_noise(self):
+        noisy=('WARNING:pdf2zh_next.config.cli_env_model:No translation engine selected\n'*8)+'pdf2zh-next version: 2.10.2\n'
+        self.assertEqual(worker.parse_engine_version(noisy),'2.10.2')
+        self.assertIn('2.10.2',worker.parse_engine_version(noisy))
+        self.assertEqual(worker.parse_engine_version('pdf2zh-next version: 2.11.0'),'2.11.0')
+
     def test_real_subprocess_engine_fixture_stops_at_needs_review(self):
         base=Path(__file__).resolve().parents[1]/'.test-output';base.mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=base) as folder:

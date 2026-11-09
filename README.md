@@ -1,6 +1,20 @@
 # DSH Literature Workflow
 
-**DeepSeek Harness 的论文翻译插件，当前为 `0.1.0-rc.1` 测试版。**
+**DeepSeek Harness 的论文翻译插件，当前源码版本 `0.2.0-beta.1`。** 独立本机后台承担批处理，DSH作为可选入口；这是受控测试版，尚未完成真实全文交付与Zotero回挂的端到端验收。
+
+## 当前后台版本
+
+新源码默认 `mode: "service"`，只连接已配置的本机后台。DSH 配置 `controllerConfig` 为安装步骤生成的 `dsh-adapter.json`；它仅包含 loopback 地址和 DSH 角色凭据。不得把包含维护/确认凭据的完整 service.json 填入插件。
+
+后台负责 Zotero 只读取材、断网 PDF 解析、背景语料、累计人民币预算、独立 API 复核、最多两轮返修、重新验收及回挂。DSH 注册一个 `dsh-literature-batch` skill，Dot 提供启动与监督两个 skill；二者调用同一持久化服务。未连接时不启动旧 worker，不自动降级。
+
+当前通过217项Python回归、5项Node测试、真实隔离容器链路、真实Zotero只读索引及本机角色客户端验证。真实首篇在两轮返修后仍未通过，结果和问题包保留；原授权清单其余14篇已启动自动处理。`productionReady`仍为false，精确清单的维护收据只放行该批次，不授予任意批次权限。真实Zotero回挂、DSH新插件实机安装与新电脑冷安装尚未验收。
+
+流程与边界：[工作流](docs/WORKFLOW.md)。运行与接口：[后台服务接入](docs/BACKGROUND_SERVICE.md)。安装：[安装恢复](docs/INSTALLATION_RECOVERY.md)。验证：[测试记录](docs/VALIDATION.md)。本机部署暂缓Dot，由GPT-6.1 Sol做必要监督；日常翻译、预算、返修与恢复由后台执行，不自动调用GPT修复。
+
+## 以下为旧 RC1 兼容说明
+
+以下工具、三个旧 skills 和独立 Python worker 仅属于显式 `mode: "legacy"`。保留用于复查已有 RC1 成果，不是新后台部署步骤。旧安装副本尚未覆盖；不要用旧 start/review/accept 流程绕过新后台门禁。
 
 Zotero 取材 → PDFMathTranslate-next / DeepSeek API → 中文阅读版和左右双语版 → 独立复核 → 验收发布 → Zotero 附件回挂。
 

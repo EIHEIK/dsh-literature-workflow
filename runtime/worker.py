@@ -9,19 +9,28 @@ import threading
 import time
 from core import Store,pdf_info,atomic
 from proxy import Meter
+from engine_environment import engine_environment
 
 REQUIRED=['--openai','--openai-base-url','--openai-api-key','--openai-model','--output','--lang-in','--lang-out','--pages','--translate-table-text']
 
-def probe(engine):
+def parse_engine_version(raw):
+    """pdf2zh_next prints rich warnings before the version line; keep the number, not a prefix."""
+    match=re.search(r'version\s*[:：]\s*([0-9][^\s]*)',raw or '',re.I)
+    if match:return match.group(1)
+    match=re.search(r'\b(\d+\.\d+\.\d+)\b',raw or '')
+    return match.group(1) if match else (raw or '').strip()[:300]
+
+def probe(engine,env=None):
     exe=Path(engine)
     if not exe.is_absolute() or not exe.is_file(): raise ValueError('Configure an absolute pdf2zh_next executable path')
-    result=subprocess.run([str(exe),'--help'],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=90)
+    result=subprocess.run([str(exe),'--help'],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=90,env=env)
     if result.returncode: raise ValueError('pdf2zh_next --help failed')
     missing=[x for x in REQUIRED if x not in result.stdout]
     if missing: raise ValueError('Engine lacks required flags: '+', '.join(missing))
-    version=subprocess.run([str(exe),'--version'],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=30)
+    version=subprocess.run([str(exe),'--version'],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=30,env=env)
     if version.returncode: raise ValueError('Engine version probe failed')
-    return {'version':(version.stdout or version.stderr).strip()[:300],'help':result.stdout}
+    raw=((version.stdout or '')+'\n'+(version.stderr or '')).strip()
+    return {'version':parse_engine_version(raw),'rawVersion':raw[:2000],'help':result.stdout}
 
 def stop_process(child):
     if child.poll() is not None:return
@@ -47,8 +56,9 @@ def run(root,jid,token):
     try:
         key=os.environ.get('DEEPSEEK_API_KEY','').strip()
         if not key:raise ValueError('DEEPSEEK_API_KEY is not available to the DSH process; no request sent')
-        engine=config['engine'];cap=probe(engine)
-        if config.get('expectedEngineVersion') and config['expectedEngineVersion'] not in cap['version']:raise ValueError('Engine version differs from configured pin')
+        env=engine_environment(attempt/'environment')
+        engine=config['engine'];cap=probe(engine,env=env)
+        if config.get('expectedEngineVersion') and config['expectedEngineVersion'] != cap['version']:raise ValueError('Engine version differs from configured pin')
         atomic(attempt/'engine.json',{'path':engine,'version':cap['version']})
         meter=Meter(key,config.get('model','deepseek-flash'),attempt/'api-usage.jsonl',config.get('requestLimit',100),config.get('qps',1),config.get('apiConcurrency',2))
         base=meter.start();out=attempt/'engine-output';out.mkdir()
@@ -65,10 +75,8 @@ def run(root,jid,token):
         if config.get('prompt'):
             if '--custom-system-prompt' not in cap['help']:raise ValueError('Engine cannot accept academic translation prompt')
             argv.extend(['--custom-system-prompt',config['prompt']])
-        env={**os.environ,'PYTHONUTF8':'1','PYTHONIOENCODING':'utf-8'}
-        # The child only needs the short-lived loopback token; strip actual API credentials.
-        for k in list(env):
-            if k in ('DEEPSEEK_API_KEY','OPENAI_API_KEY','ANTHROPIC_API_KEY'):env.pop(k,None)
+        # The allowlisted environment has no real API credentials; argv contains
+        # only the short-lived local proxy credential.
         procopts={'creationflags':0x08000000} if os.name=='nt' else {'start_new_session':True}
         child=subprocess.Popen(argv,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,env=env,**procopts)
         atomic(attempt/'process.json',{'pid':child.pid,'startedAt':time.time()})

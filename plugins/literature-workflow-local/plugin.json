@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "literature-workflow-local",
+  "version": "0.2.0-dev",
+  "description": "本地文献批次启动和监督；固定后台执行，明确预算、来源和验收。开发中，须完成实机验收后启用。"
+}

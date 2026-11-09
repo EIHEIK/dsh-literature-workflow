@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "verifiedDate": "2026-11-10",
+  "model": "DeepSeek-V4.1-Flash-1017",
+  "tokenizer": {
+    "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/resolve/main/tokenizer.json",
+    "commit": "1bae0e1088993b9b82de08f59de5be5a34e42170",
+    "sha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
+    "bytes": 6367257,
+    "normalizer": {
+      "type": "Sequence",
+      "normalizers": []
+    },
+    "preTokenizer": {
+      "type": "Sequence",
+      "pretokenizers": [
+        {
+          "type": "Split",
+          "pattern": {
+            "Regex": "\\p{N}{1,3}"
+          },
+          "behavior": "Isolated",
+          "invert": false
+        },
+        {
+          "type": "Split",
+          "pattern": {
+            "Regex": "[一-龥぀-ゟ゠-ヿ]+"
+          },
+          "behavior": "Isolated",
+          "invert": false
+        },
+        {
+          "type": "Split",
+          "pattern": {
+            "Regex": "[!\"#$%&'()*+,\\-./:;<=>?@\\[\\\\\\]^_`{|}~][A-Za-z]+|[^\r\n\\p{L}\\p{P}\\p{S}]?[\\p{L}\\p{M}]+| ?[\\p{P}\\p{S}]+[\r\n]*|\\s*[\r\n]+|\\s+(?!\\S)|\\s+"
+          },
+          "behavior": "Isolated",
+          "invert": false
+        },
+        {
+          "type": "ByteLevel",
+          "add_prefix_space": false,
+          "trim_offsets": true,
+          "use_regex": false
+        }
+      ]
+    },
+    "modelType": "BPE",
+    "addedTokens": 1283
+  },
+  "vision": {
+    "source": "https://api-docs.deepseek.com/guides/vision/",
+    "maxTokensPerImage": 1024
+  },
+  "derivation": [
+    "Matching official tokenizer: empty normalization sequence, byte-level BPE, no prefix-space insertion.",
+    "BPE merges cannot increase the count beyond original UTF-8 bytes. Twice the byte count is used conservatively.",
+    "Framing allowance: 1024 tokens per message plus 4096 fixed tokens. Tool calls, file IDs, remote image URLs and arbitrary parts are rejected.",
+    "Each inline image uses the documented 1024-token maximum. The bound never exceeds the documented full context ceiling.",
+    "Maximum configured output is reserved in full; cache discounts are not assumed. Actual usage is always settled.",
+    "Observed bound violations reject delivery and pause provider dispatch. Prior unknown reservations are never refunded or recomputed."
+  ]
+}

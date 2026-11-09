@@ -1,3 +1,4 @@
-- id: dsh-literature-workflow
-  name: dsh-literature-workflow
-  config: {}
+- insert:
+    - id: dsh-literature-workflow
+      name: dsh-literature-workflow
+      config: {}

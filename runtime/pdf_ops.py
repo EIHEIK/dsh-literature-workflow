@@ -17,19 +17,20 @@ def mixed_line(page,text,x,y,size=12):
 
 def compose(source, mono, mapping, supplements, folder):
     folder=Path(folder); preview=folder/'preview';preview.mkdir()
-    src=fitz.open(source); translated=fitz.open(mono); cn=fitz.open(); bi=fitz.open(); rows=[]
+    src=fitz.open(source); translated=fitz.open(mono); cn=fitz.open(); bi=fitz.open(); rows=[];parts={}
     def pair(doc,page_no,source_page,kind):
         p=doc[page_no]; original=src[source_page-1]
+        parts[source_page]=parts.get(source_page,0)+1
+        continuation=f' | Continuation {parts[source_page]-1}' if parts[source_page]>1 else ''
         c=cn.new_page(width=p.rect.width,height=p.rect.height+28)
         c.show_pdf_page(fitz.Rect(0,28,p.rect.width,p.rect.height+28),doc,page_no)
-        header(c,f'Source PDF p. {source_page} | Chinese page {len(cn)}'+(' | Supplement' if kind=='supplement' else ''))
+        header(c,f'Source PDF p. {source_page} | Chinese page {len(cn)}'+continuation+(' | Supplement' if kind=='supplement' else ''))
         b=bi.new_page(width=original.rect.width+p.rect.width+12,height=max(original.rect.height,p.rect.height)+28)
         b.show_pdf_page(fitz.Rect(0,28,original.rect.width,original.rect.height+28),src,source_page-1)
         b.show_pdf_page(fitz.Rect(original.rect.width+12,28,original.rect.width+12+p.rect.width,p.rect.height+28),doc,page_no)
-        header(b,f'Source PDF p. {source_page} | Original (left) / Chinese (right) | Pair {len(bi)}')
-        rows.append({'sourcePage':source_page,'cnPage':len(cn),'biPage':len(bi),'kind':kind})
-    for idx,source_page in enumerate(mapping): pair(translated,idx,source_page,'translation')
-    for item in supplements:
+        header(b,f'Source PDF p. {source_page} | Original (left) / Chinese (right) | Pair {len(bi)}'+continuation)
+        rows.append({'sourcePage':source_page,'cnPage':len(cn),'biPage':len(bi),'kind':kind,'sourcePart':parts[source_page]})
+    def supplement(item):
         extra=fitz.open(); lines=[]
         text=(item.get('title','图表中文对照')+'\n'+item['text']).replace('\t','    ')
         for line in text.splitlines():
@@ -44,6 +45,15 @@ def compose(source, mono, mapping, supplements, folder):
                 mixed_line(page,line,38,48+n*19)
         for n in range(len(extra)): pair(extra,n,item['sourcePage'],'supplement')
         extra.close()
+    # Keep source-page explanations adjacent to the corresponding translation,
+    # including when a source page occupies several Chinese continuation pages.
+    ordered=sorted(range(len(mapping)),key=lambda index:mapping[index])
+    for position,idx in enumerate(ordered):
+        source_page=mapping[idx]
+        pair(translated,idx,source_page,'translation')
+        if position+1==len(ordered) or mapping[ordered[position+1]]!=source_page:
+            for item in supplements:
+                if item['sourcePage']==source_page:supplement(item)
     cn.save(folder/'chinese.pdf',garbage=4,deflate=True);bi.save(folder/'bilingual.pdf',garbage=4,deflate=True)
     layout={'cnPages':len(cn),'biPages':len(bi),'rows':rows,'mappingStatus':'requires_independent_verification',
             'scope':'Full declared source scope; supplemental pages are explicitly marked'}

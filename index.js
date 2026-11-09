@@ -9,6 +9,8 @@ export const name='dsh-literature-workflow';
 export const inject=['tools'];
 const bundledPython=join(homedir(),'.dsh','dsh-runtimes','dsh-primary-runtime','dependencies','python',process.platform==='win32'?'python.exe':'bin/python3');
 export const Config=Schema.object({
+  mode:Schema.union(['service','legacy']).default('service').description('Use the installed background controller. Legacy is explicit compatibility only; no automatic fallback.'),
+  controllerConfig:Schema.string().default('').description('Private DSH adapter JSON path containing only loopback URL and DSH credential, provisioned by the installer.'),
   dataDir:Schema.string().default(join(homedir(),'.dsh','storages','dsh-literature-workflow')).description('Durable jobs/output directory; separate from old production workflow.'),
   python:Schema.string().default(existsSync(bundledPython)?bundledPython:'python').description('Python 3.10+ with PyMuPDF. Prefer a dedicated virtual environment.'),
   engine:Schema.string().default('').description('Absolute path to pdf2zh_next executable.'),

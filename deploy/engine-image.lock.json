@@ -1,0 +1,34 @@
+{
+  "imageId": "sha256:ca961b03f5f73a8de2cfd2c55c4c846b6dc116bda55d1a778583e01295cf5796",
+  "localTag": "literature-engine:2.10.2-0.7.1",
+  "created": "2026-11-10T01:19:30.245802998+08:00",
+  "requirementsSha256": "4f5fe2e0fdbfdc10ef99cb089e48eb229e04deaeae0d43527ced47671db3e6e9",
+  "dockerfileSha256": "47b6b4121849535ffbe4d8a2f88e0f10f0467c4375d806ff62b47c1053ad7194",
+  "imageSizeBytes": 2928014079,
+  "validation": {
+    "passed": true,
+    "checks": {
+      "nonRoot": true,
+      "rootReadOnly": true,
+      "networkDenied": true,
+      "noDockerSocket": true,
+      "capabilitiesDropped": true,
+      "noNewPrivileges": true,
+      "assetHashes": true,
+      "offlineWarmup": true,
+      "layoutModelLoaded": true,
+      "chineseTextSearchable": true,
+      "pinnedVersions": true
+    },
+    "assetCount": 183,
+    "versions": {
+      "pdf2zh-next": "2.10.2",
+      "babeldoc": "0.7.1",
+      "pymupdf": "1.28.2",
+      "onnxruntime": "1.31.1"
+    },
+    "modelCalls": 0,
+    "boundary": "Image isolation, assets, layout initialization, text and rendering only; translation quality untested"
+  },
+  "note": "Local image, not published. Runtime must use imageId with --pull never."
+}

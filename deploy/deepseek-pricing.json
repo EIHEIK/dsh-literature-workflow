@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "model": "deepseek-flash",
+  "documentedVersion": "DeepSeek-V4.1-Flash-1017",
+  "currency": "CNY",
+  "verifiedDate": "2026-11-10",
+  "validThrough": "2026-11-17",
+  "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+  "contextTokenCeiling": 1048576,
+  "peakMicrosPerMillion": {"inputMiss": 2000000, "inputHit": 40000, "output": 8000000},
+  "accounting": "usage_at_peak_rate_upper_bound",
+  "inputReservation": {
+    "method": "verified_byte_bpe_and_images_v1",
+    "textByteMultiplier": 2,
+    "perMessageTokens": 1024,
+    "fixedTokens": 4096,
+    "maxImageTokens": 1024,
+    "tokenizerSha256": "c90dfa01249db1be4245780a052ede752e1361c612ac6d08e2bdada7d599476b",
+    "tokenizerSource": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash-1017/blob/1bae0e1088993b9b82de08f59de5be5a34e42170/tokenizer.json",
+    "visionSource": "https://api-docs.deepseek.com/guides/vision/",
+    "verification": "Matching official tokenizer JSON uses byte-level BPE with an empty normalization sequence and no prefix-space insertion. Text tokens are bounded by bytes; doubled here with explicit framing allowances. Official image limit is 1024 tokens per image. Any observed input-bound violation settles actual usage and pauses the provider globally."
+  },
+  "notes": "Reserve the verified request input upper bound plus configured maximum output; fall back to full context when no verified request bound is configured. Budget caps, prior spent and unknown charges are unchanged. Returned usage is settled at peak rates as a fee upper bound, not an exact invoice. Refresh before expiry."
+}

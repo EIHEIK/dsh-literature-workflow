@@ -1,0 +1,16 @@
+FROM docker.io/library/python@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ENV PYTHONUNBUFFERED=1 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN apt-get update && apt-get install --no-install-recommends -y libgl1 libglib2.0-0 libxext6 libsm6 libxrender1 fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
+COPY engine-requirements.lock /opt/engine-requirements.lock
+RUN python -m pip install --no-cache-dir --only-binary=:all: --require-hashes -r /opt/engine-requirements.lock && python -m pip check
+RUN pdf2zh_next --version && babeldoc --version
+ENV HOME=/opt/engine-home
+RUN mkdir -p /opt/engine-home && babeldoc --warmup
+COPY image_manifest.py /opt/image_manifest.py
+RUN python /opt/image_manifest.py && chmod -R a+rX /opt/engine-home
+ENV HOME=/work/home XDG_CACHE_HOME=/work/home/.cache
+USER 10001:10001
+WORKDIR /work
+CMD ["python", "-c", "import importlib.metadata as m; print(m.version('pdf2zh-next'),m.version('babeldoc'))"]

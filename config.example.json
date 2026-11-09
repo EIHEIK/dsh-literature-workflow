@@ -1,4 +1,6 @@
 {
+  "mode": "service",
+  "controllerConfig": "D:/LiteratureTranslation/private/dsh-adapter.json",
   "dataDir": "D:/LiteratureTranslation/jobs",
   "python": "D:/LiteratureTranslation/runtime/Scripts/python.exe",
   "engine": "D:/LiteratureTranslation/engine/Scripts/pdf2zh_next.exe",

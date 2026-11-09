@@ -7,12 +7,14 @@ import json
 import tarfile
 ROOT=Path(__file__).resolve().parents[1]
 pkg=json.loads((ROOT/'package.json').read_text(encoding='utf-8'))
-allowed=['package.json','index.js','lib','runtime','skills','scripts','tests','docs','cordis.patch.yml','README.md','LICENSE','THIRD_PARTY_NOTICES.md','config.example.json']
+allowed=['package.json','index.js','lib','runtime','skills','scripts','tests','docs','deploy','plugins','cordis.patch.yml','README.md','LICENSE','THIRD_PARTY_NOTICES.md','config.example.json']
 files=[]
+local_only={'docs/IMPLEMENTATION_PLAN.md','docs/IMPLEMENTATION_PLAN_CURRENT.md','docs/IMPLEMENTATION_STATUS.md'}
 for entry in allowed:
     path=ROOT/entry
     if not path.exists():raise SystemExit('Missing release input: '+entry)
-    files.extend([path] if path.is_file() else [p for p in path.rglob('*') if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc'])
+    files.extend([path] if path.is_file() else [p for p in path.rglob('*') if p.is_file() and '__pycache__' not in p.parts and p.suffix!='.pyc'
+                 and p.relative_to(ROOT).as_posix() not in local_only])
 out=ROOT/'dist';out.mkdir(exist_ok=True);target=out/f"{pkg['name']}-{pkg['version']}.tgz"
 with open(target,'wb') as raw,gzip.GzipFile(fileobj=raw,mode='wb',mtime=0) as gz,tarfile.open(fileobj=gz,mode='w') as tar:
     for path in sorted(set(files)):

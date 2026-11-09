@@ -1,0 +1,4 @@
+**
+!Dockerfile.engine
+!engine-requirements.lock
+!image_manifest.py
